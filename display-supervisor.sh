@@ -1,0 +1,204 @@
+#!/bin/bash
+version=0.3
+
+usage () {
+	echo \
+'Usage: display-supervisor [-i] [-l [switch]]
+
+	-f, --feh	Run feh bg script.
+                         Executes ~/.fehbg upon completion.
+	-i, --i3	Test for i3wm instance.
+                         For avoiding conflict with multiple environments.
+	-l, --lid	Check laptop lid status.
+                         It is possible to specify switch. Defaults to 'LID0'
+                         If unsure, look under /proc/acpi/button/lid/...
+	-v, --version	Print version info.
+
+ Useful for setting monitor layouts on system login/resume/hotplug
+ when using window managers that do not handle display settings.
+
+ Depends on xorg-xrandr.
+
+This is free software.
+2015, Michael Heyns <https://github.com/beanaroo>
+'
+}
+
+handle_args () {
+	while [ "$1" != "" ]; do
+		case $1 in
+			-h | --help )		usage
+								exit
+								;;
+			-f | --feh )		fehbg=true
+								;;
+			-i | --i3 )			i3test=true
+								;;
+			-l | --lid )    	lidtest=true
+                                lidswitch=${2:-LID0}
+                                lidstatus=$(cat /proc/acpi/button/lid/$lidswitch/state 2>/dev/null | awk '{print $NF}')
+                                shift
+								;;
+			-v | --version )	echo "display-supervisor $version"
+								exit
+								;;
+			* )				usage
+								exit 1
+								;;
+		esac
+		shift
+	done
+}
+
+
+## Error Handling
+handle_err () {
+
+    # Test for running Xorg server
+    if [ -z "$(ps -C Xorg --no-headers)" ]; then
+        echo "$prefix No Xorg server found. Exiting..."
+        exit 1
+    fi
+
+    # Test for running instance of i3
+    if [ "$i3test" == "true" -a -z "$(ps -C i3 --no-headers)" ]; then
+        echo "$prefix i3wm not running. Exiting..."
+        exit 1
+    fi
+
+    # Test for valid laptop lid status.
+    if [ "$lidtest" == "true" -a -z "$lidstatus" ]; then
+        echo "$prefix Laptop lid switch $lidswitch not found. Exiting..."
+        exit 1
+    fi
+}
+
+## Get X user variables
+getXuser() {
+    Xtty=$(</sys/class/tty/tty0/active)
+    Xpid=$(pgrep -t $Xtty -f /usr/lib/xorg-server/Xorg)
+
+    Xenv+=("$(egrep -aoz 'USER=.+' /proc/$Xpid/environ)")
+    Xenv+=("$(egrep -aoz 'XAUTHORITY=.+' /proc/$Xpid/environ)")
+    Xenv+=("$(egrep -aoz ':[0-9](.[0-9])?' /proc/$Xpid/cmdline)")
+
+    Xenv=(${Xenv[@]#*=})
+
+    (( ${#Xenv[@]} )) && {
+        export XUSER=${Xenv[0]} XAUTHORITY=${Xenv[1]} DISPLAY=${Xenv[2]}
+    }
+}
+
+## Declare Output Devices
+declare_outputs () {
+
+    devices=$(find /sys/class/drm/*/status)
+    while read l ; do
+        dir=$(dirname $l)
+        status=$(cat $l)
+        dev=$(echo $dir | cut -d\- -f 2-)
+
+        if [ $(expr match  $dev "HDMI") != "0" ]; then
+            dev=HDMI${dev#HDMI-?-}
+        else
+            dev=$(echo $dev | tr -d '-')
+        fi
+
+        if [ "connected" == "$status" ]; then
+            echo "$prefix $dev connected"
+            declare -gA $dev="yes"
+        fi
+    done <<< "$devices"
+}
+
+## Configure monitors for closed lid
+config_closed_lid () {
+    if [ "$lidstatus" == "closed" ]; then
+        echo "$prefix Laptop lid is closed"
+    elif [ -n "$LVDS1" -a -z "$lidtest" ]; then
+        echo "$prefix Laptop display will be ignored unless -l option is set"
+    fi
+    if [ -n "$HDMI1" -a -n "$VGA1" ]; then
+        echo "$prefix SETTING: HDMI1 (Primary) - VGA1 (Right)"
+        xrandr --output LVDS1 --off \
+               --output HDMI1 --auto --primary \
+               --output VGA1 --auto --right-of HDMI1
+    elif [ -n "$HDMI1" -a -z "$VGA1" ]; then
+        echo "$prefix SETTING: HDMI1 (Primary)"
+        xrandr --output LVDS1 --off \
+               --output VGA1 --off \
+               --output HDMI1 --auto --primary
+    elif [ -z "$HDMI1" -a -n "$VGA1" ]; then
+        echo "$prefix SETTING: VGA1 (Primary)"
+        xrandr --output LVDS1 --off \
+               --output HDMI1 --off \
+               --output VGA1 --auto --primary
+    else
+        echo "$prefix No external monitors are plugged in"
+        xrandr --output HDMI1 --off \
+               --output VGA1 --off \
+               --output LVDS1 --auto --primary
+    fi
+}
+
+## Configure monitors for open lid
+config_open_lid () {
+    echo "$prefix Laptop lid is open"
+    if [ -n "$HDMI1" -a -n "$VGA1" ]; then
+        echo "$prefix SETTING: LVDS1 (Left) - HDMI1 (Primary) - VGA1 (Right)"
+        xrandr --output LVDS1 --off \
+               --output HDMI1 --auto --primary \
+               --output VGA1 --auto --right-of HDMI1
+    elif [ -n "$HDMI1" -a -z "$VGA1" ]; then
+        echo "$prefix HDMI1 is plugged in, but not VGA1"
+        echo "$prefix SETTING: LVDS1 (Primary) - HDMI1 (Right)"
+        xrandr --output VGA1 --off \
+               --output LVDS1 --auto --primary \
+               --output HDMI1 --auto --right-of LVDS1 --noprimary
+    elif [ -z "$HDMI1" -a -n "$VGA1" ]; then
+        echo "$prefix SETTING: LVDS1 (Primary) - VGA1 (Right)"
+        xrandr --output HDMI1 --off \
+               --output LVDS1 --auto --primary \
+               --output VGA1 --auto --right-of LVDS1 --noprimary
+    else
+        echo "$prefix No external monitors are plugged in"
+        xrandr --output HDMI1 --off \
+               --output VGA1 --off \
+               --output LVDS1 --auto --primary
+    fi
+}
+
+
+#-----------#
+#   Begin   #
+#-----------#
+
+# Log output prefix
+prefix='[ Display Supervisor: ]:'
+#exec 1> >(logger -s -t "Display Supervisor") 2>&1
+
+echo "Executing as $UID"
+handle_args "$@"
+handle_err
+
+# if [ "$UID" == "0" ]; then
+    getXuser
+# fi
+
+declare_outputs
+
+if [ -z "$lidstatus" -o "$lidstatus" == "closed" ]; then
+    config_closed_lid
+elif [ "$lidstatus" == "open" ]; then
+    config_open_lid
+fi
+
+# Run .fehbg script if -f argument is given.
+if [ "$fehbg" == "true" ]; then
+    if [ -x /home/$XUSER/.fehbg ]; then
+        echo "Setting background using .fehbg."
+        $(/home/$XUSER/.fehbg 2>/dev/null)
+    else
+        echo ".fehbg script does not exist or is not executable. Use 'feh --bg-xxx' to generate it."
+    fi
+fi
