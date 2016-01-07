@@ -178,6 +178,10 @@ configure_displays ()
             echo ".$prefix Failed to execute ~/.fehbg script. Use 'feh --bg-xxx' to generate one."
         fi
     fi
+
+	# FIXME: Prevent segfault occurring from simultanious signals.
+	sleep 2
+
 }
 
 #-----------#
