@@ -1,7 +1,8 @@
 #!/bin/bash
 version="0.4a"
 
-usage () {
+usage ()
+{
 	echo \
 'Usage: display-supervisor [-f] [-i] [-l [switch]]
 
@@ -24,7 +25,8 @@ This is free software.
 '
 }
 
-handle_args () {
+handle_args ()
+{
 	while [ "$1" != "" ]; do
 		case $1 in
 			-h | --help )		usage
@@ -52,8 +54,8 @@ handle_args () {
 
 
 ## Error Handling
-handle_err () {
-
+handle_err ()
+{
     # Test for running Xorg server
     if [ -z "$(ps -C Xorg --no-headers)" ]; then
         echo "$prefix No Xorg server found. Exiting..."
@@ -74,8 +76,8 @@ handle_err () {
 }
 
 ## Declare Output Devices
-declare_outputs () {
-
+declare_outputs ()
+{
     devices=$(find /sys/class/drm/*/status)
     while read l ; do
         dir=$(dirname $l)
@@ -96,7 +98,8 @@ declare_outputs () {
 }
 
 ## Configure monitors for closed lid
-config_closed_lid () {
+config_closed_lid ()
+{
     if [ "$lidstatus" == "closed" ]; then
         echo "$prefix Laptop lid is closed"
     elif [ -n "$LVDS1" -a -z "$lidtest" ]; then
@@ -126,7 +129,8 @@ config_closed_lid () {
 }
 
 ## Configure monitors for open lid
-config_open_lid () {
+config_open_lid ()
+{
     echo "$prefix Laptop lid is open"
     if [ -n "$HDMI1" -a -n "$VGA1" ]; then
         echo "$prefix SETTING: LVDS1 (Left) - HDMI1 (Primary) - VGA1 (Right)"
@@ -152,33 +156,53 @@ config_open_lid () {
     fi
 }
 
+configure_displays ()
+{
+
+    handle_err
+
+    declare_outputs
+
+    if [ -z "$lidstatus" -o "$lidstatus" == "closed" ]; then
+        config_closed_lid
+    elif [ "$lidstatus" == "open" ]; then
+        config_open_lid
+    fi
+
+    # Run .fehbg script if -f argument is given.
+    if [ "$fehbg" == "true" ]; then
+        if [ -x $HOME/.fehbg ]; then
+            echo "$prefix Setting background using .fehbg."
+            $($HOME/.fehbg 2>/dev/null)
+        else
+            echo ".$prefix Failed to execute ~/.fehbg script. Use 'feh --bg-xxx' to generate one."
+        fi
+    fi
+}
 
 #-----------#
 #   Begin   #
 #-----------#
 
-# Log output prefix
+# Set exit signal trap.
+trap "echo 'Received interrupt. Exiting...' ; exit" SIGHUP SIGINT SIGQUIT
+
+# Log output.
 prefix='[ Display Supervisor: ]:'
 #exec 1> >(logger -s -t "Display Supervisor") 2>&1
 
-echo "Executing as $UID"
+# Handle arguments.
 handle_args "$@"
-handle_err
 
-declare_outputs
+# Configure displays upon initialization.
+configure_displays
 
-if [ -z "$lidstatus" -o "$lidstatus" == "closed" ]; then
-    config_closed_lid
-elif [ "$lidstatus" == "open" ]; then
-    config_open_lid
-fi
+# Set reconfigure trap.
+trap "echo 'Received signal. Reconfiguring displays.' ; configure_displays" RTMIN+5
 
-# Run .fehbg script if -f argument is given.
-if [ "$fehbg" == "true" ]; then
-    if [ -x $HOME/.fehbg ]; then
-        echo "Setting background using .fehbg."
-        $($HOME/.fehbg 2>/dev/null)
-    else
-        echo ".fehbg script does not exist or is not executable. Use 'feh --bg-xxx' to generate it."
-    fi
-fi
+# Wait for signals
+while :
+do
+    sleep 60 &
+    wait 
+done
