@@ -1,9 +1,9 @@
 #!/bin/bash
-version=0.3
+version="0.4a"
 
 usage () {
 	echo \
-'Usage: display-supervisor [-i] [-l [switch]]
+'Usage: display-supervisor [-f] [-i] [-l [switch]]
 
 	-f, --feh	Run feh bg script.
                          Executes ~/.fehbg upon completion.
@@ -71,22 +71,6 @@ handle_err () {
         echo "$prefix Laptop lid switch $lidswitch not found. Exiting..."
         exit 1
     fi
-}
-
-## Get X user variables
-getXuser() {
-    Xtty=$(</sys/class/tty/tty0/active)
-    Xpid=$(pgrep -t $Xtty -f /usr/lib/xorg-server/Xorg)
-
-    Xenv+=("$(egrep -aoz 'USER=.+' /proc/$Xpid/environ)")
-    Xenv+=("$(egrep -aoz 'XAUTHORITY=.+' /proc/$Xpid/environ)")
-    Xenv+=("$(egrep -aoz ':[0-9](.[0-9])?' /proc/$Xpid/cmdline)")
-
-    Xenv=(${Xenv[@]#*=})
-
-    (( ${#Xenv[@]} )) && {
-        export XUSER=${Xenv[0]} XAUTHORITY=${Xenv[1]} DISPLAY=${Xenv[2]}
-    }
 }
 
 ## Declare Output Devices
@@ -181,10 +165,6 @@ echo "Executing as $UID"
 handle_args "$@"
 handle_err
 
-# if [ "$UID" == "0" ]; then
-    getXuser
-# fi
-
 declare_outputs
 
 if [ -z "$lidstatus" -o "$lidstatus" == "closed" ]; then
@@ -195,9 +175,9 @@ fi
 
 # Run .fehbg script if -f argument is given.
 if [ "$fehbg" == "true" ]; then
-    if [ -x /home/$XUSER/.fehbg ]; then
+    if [ -x $HOME/.fehbg ]; then
         echo "Setting background using .fehbg."
-        $(/home/$XUSER/.fehbg 2>/dev/null)
+        $($HOME/.fehbg 2>/dev/null)
     else
         echo ".fehbg script does not exist or is not executable. Use 'feh --bg-xxx' to generate it."
     fi

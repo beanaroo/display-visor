@@ -30,6 +30,8 @@ How I use it
 ##### User Login:
 Added as `exec` to i3 config.
 
+#### Fix on its way
+~~
 ##### Monitor hotplug:
 Created the following udev rule in `/etc/udev/rules.d/20-display-supervisor.conf`:
 
@@ -71,7 +73,7 @@ Create a wake-up script `/usr/lib/systemd/system-sleep/initiate-display-supervis
     esac
 
 Remember to mark as executable.
-
+~~
 Dependencies
 ------------
 * xorg-xrandr
@@ -79,7 +81,7 @@ Dependencies
 
 Notes
 -----
-In all of the above usages, besides user login, the script is run as root user by the system. This requires the use of a `getXuser()` function to find `$DISPLAY` and `$XAUTHORITY` needed by `xrandr`. Running as user (upon login) then only works when launching sessions with `startx` instead of a display manager. I am looking into a better method.
+~~In all of the above usages, besides user login, the script is run as root user by the system. This requires the use of a `getXuser()` function to find `$DISPLAY` and `$XAUTHORITY` needed by `xrandr`. Running as user (upon login) then only works when launching sessions with `startx` instead of a display manager.~~ I am looking into a better method.
 
 To-do
 ----
