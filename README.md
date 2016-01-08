@@ -5,6 +5,20 @@ i3 does not manage displays and I move my laptop around a lot. This little scrip
 
 How it works
 ------------
+When executed, it checks the available and connected display outputs and sets the optimal resolution for each (as determined by xrandr). It can then also reset the wallpaper. The script then waits for a signal to restart the procedure.
+
+At the moment I have three outputs defined: `LVDS1`, `HDMI1` and `VGA1`. For now, layout configuration is hard-coded. I am hoping to make this more dynamic.
+
+When lid is open (`-l`): LVDS (Primary) on left with HDMI or VGA on right. 
+My laptop can only handle two displays at a time, so if both HDMI and VGA are present, or... 
+
+When lid is closed: HDMI (Primary) on left with VGA on right.
+
+If you prefer, you could of course use [arandr](https://christian.amsuess.com/tools/arandr/) to generate layout scripts and replace my xrandr lines with those.
+
+How to use it
+------------
+
     Usage: display-supervisor [-f] [-i] [-l [switch]]
 
 		-f, --feh	Run feh bg script.
@@ -16,79 +30,36 @@ How it works
                              If unsure, look under /proc/acpi/button/lid/...
 		-v, --version	Print version info.
 
-When executed, it checks the available and connected display outputs and sets the optimal resolution for each (as determined by xrandr). It can then also reset the wallpaper.
-At the moment I have three outputs defined: `LVDS1`, `HDMI1` and `VGA1`. For now, layout configuration is hard-coded. I am hoping to make this more dynamic.
 
-When lid is open: LVDS (Primary) on left with HDMI or VGA on right.
-My laptop can only handle two displays at a time, so if both HDMI and VGA are present, or lid is closed: HDMI (Primary) on left with VGA on right.
+##### Start:
+Simply set the script to start upon login.
 
-You could of course use `arandr` to generate layout scripts and replace my xrandr lines with those.
+i3wm example:
 
-How I use it
-------------
+    exec --no-startup-id display-supervisor.sh
 
-##### User Login:
-Added as `exec` to i3 config.
+##### Signal:
+The script waits for a `RTMIN+5` real-time signal. This can be sent with pkill like so:
 
-#### Fix on its way
-~~
-##### Monitor hotplug:
-Created the following udev rule in `/etc/udev/rules.d/20-display-supervisor.conf`:
+    pkill -x -RTMIN+5 display-supervi
 
-    ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", RUN+="/path/to/display-supervisor.sh -f -l"
+Note: The process name is cut off at 15 characters by `/proc/pid/stat`.
 
-##### Laptop lid open/close:
-Using acpid with the following rules in `/etc/acpi/handler.sh`:
+##### Events:
+Some default event signallers are included.
 
-    ...
-    button/lid)
-        case "$3" in
-            close)
-                logger 'LID closed'
-                /path/to/display-supervisor.sh -f -l
-                ;;
-            open)
-                logger 'LID opened'
-                /path/to/display-supervisor.sh -f -l
-                ;;
-            *)
-                logger "ACPI action undefined: $3"
-                ;;
-        esac
-        ;;
-    ...
+ * __udev__ - A hotplug rule for when cables are (dis)connected.
+ * __acpid__ - A lid switch event action. Useful when `-l` argument is used.
+ * __systemd-sleep__ - A wake-up hook. [1]
 
-##### System resume:
-Create a wake-up script `/usr/lib/systemd/system-sleep/initiate-display-supervisor.sh`:
-
-    #!/bin/sh
-    case $1/$2 in
-      pre/*)
-        exit 0
-        ;;
-      post/*)
-        echo "Waking up from $2... Refreshing displays."
-        $(/path/to/display-supervisor.sh·-f·-l)
-        ;;
-    esac
-
-Remember to mark as executable.
-~~
 Dependencies
 ------------
-* xorg-xrandr
-* acpid (for lid events)
+* [xorg-xrandr](http://www.x.org/wiki/Projects/XRandR/)
+* [acpid](http://sourceforge.net/projects/acpid2/)(for lid events)
 
 Notes
 -----
-~~In all of the above usages, besides user login, the script is run as root user by the system. This requires the use of a `getXuser()` function to find `$DISPLAY` and `$XAUTHORITY` needed by `xrandr`. Running as user (upon login) then only works when launching sessions with `startx` instead of a display manager.~~ I am looking into a better method.
-
-To-do
-----
-- [ ] Add an option for custom bg script.
-- [ ] Daemonize script and use real-time signals instead.
-- [ ] Layout flexibility.
-- [ ] OSD?
+ [1] I am aware this is intended for local use only. If there is a better Bash implementation, I am open to suggestions.
 
 ----
 ####Credits
