@@ -1,2 +1,2 @@
-event=button lid.*
+event=button/lid.*
 action=pkill -x -RTMIN+5 display-visor
