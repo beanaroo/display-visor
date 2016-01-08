@@ -1,5 +1,5 @@
 #!/bin/bash
-version="0.4a"
+version="0.4"
 
 usage ()
 {
@@ -179,7 +179,7 @@ configure_displays ()
         fi
     fi
 
-	# FIXME: Prevent segfault occurring from simultanious signals.
+	# FIXME: Prevent segfault occurring from simultanious signals. -- Issue #5 --
 	sleep 2
 
 }
