@@ -48,8 +48,8 @@ The script waits for a `RTMIN+5` real-time signal. This can be sent with pkill l
 Some default event signallers are included.
 
  * __udev__ - A hotplug rule for when cables are (dis)connected.
- * __acpid__ - A lid switch event action. Useful when `-l` argument is used.
- * __systemd-sleep__ - A wake-up hook. [1]
+ * __acpid__ - A lid switch event action. Useful when `-l` argument is used. [1]
+ * __systemd-sleep__ - A wake-up hook. [2]
 
 Installation
 ------------
@@ -66,7 +66,8 @@ Dependencies
 
 Notes
 -----
- [1] Please see [Issue #8](https://github.com/beanaroo/display-visor/issues/8)
+ [1] Remember to restart `acpid` service for this to take effect.
+ [2] Please see [Issue #8](https://github.com/beanaroo/display-visor/issues/8)
 
 ----
 ####Credits
