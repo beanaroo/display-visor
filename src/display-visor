@@ -4,7 +4,7 @@ version="0.4a"
 usage ()
 {
 	echo \
-'Usage: display-supervisor [-f] [-i] [-l [switch]]
+'Usage: display-visor [-f] [-i] [-l [switch]]
 
 	-f, --feh	Run feh bg script.
                          Executes ~/.fehbg upon completion.
@@ -41,7 +41,7 @@ handle_args ()
                                 lidstatus=$(cat /proc/acpi/button/lid/$lidswitch/state 2>/dev/null | awk '{print $NF}')
                                 shift
 								;;
-			-v | --version )	echo "display-supervisor $version"
+			-v | --version )	echo "display-visor $version"
 								exit
 								;;
 			* )				usage
@@ -192,8 +192,8 @@ configure_displays ()
 trap "echo 'Received interrupt. Exiting...' ; exit" SIGHUP SIGINT SIGQUIT
 
 # Log output.
-prefix='[ Display Supervisor: ]:'
-#exec 1> >(logger -s -t "Display Supervisor") 2>&1
+#prefix='[ display-visor: ]:'
+exec 1> >(logger -s -t "display-visor") 2>&1
 
 # Handle arguments.
 handle_args "$@"

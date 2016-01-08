@@ -1,4 +1,4 @@
-Display Supervisor
+display-visor
 ==================
 
 i3 does not manage displays and I move my laptop around a lot. This little script fills a much needed gap in my tiling window manager setup.
@@ -19,7 +19,7 @@ If you prefer, you could of course use [arandr](https://christian.amsuess.com/to
 How to use it
 ------------
 
-    Usage: display-supervisor [-f] [-i] [-l [switch]]
+    Usage: display-visor [-f] [-i] [-l [switch]]
 
 		-f, --feh	Run feh bg script.
                              Executes ~/.fehbg upon completion.
@@ -36,14 +36,12 @@ Simply set the script to start upon login.
 
 i3wm example:
 
-    exec --no-startup-id display-supervisor.sh
+    exec --no-startup-id display-visor.sh
 
 ##### Signal:
 The script waits for a `RTMIN+5` real-time signal. This can be sent with pkill like so:
 
-    pkill -x -RTMIN+5 display-supervi
-
-Note: The process name is cut off at 15 characters by `/proc/pid/stat`.
+    pkill -x -RTMIN+5 display-visor
 
 ##### Events:
 Some default event signallers are included.
