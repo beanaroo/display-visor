@@ -26,6 +26,7 @@ How to use it
 		-i, --i3	Test for i3wm instance.
                              For avoiding conflict with multiple environments.
 		-l, --lid	Check laptop lid status.
+                             Ignored/Assumed closed if not given. 
                              It is possible to specify switch. Defaults to 'LID0'
                              If unsure, look under /proc/acpi/button/lid/...
 		-v, --version	Print version info.
@@ -34,9 +35,9 @@ How to use it
 ##### Start:
 Simply set the script to start upon login.
 
-i3wm example:
+i3wm config example:
 
-    exec --no-startup-id display-visor.sh
+    exec --no-startup-id display-visor -f -l
 
 ##### Signal:
 The script waits for a `RTMIN+5` real-time signal. This can be sent with pkill like so:
@@ -50,6 +51,14 @@ Some default event signallers are included.
  * __acpid__ - A lid switch event action. Useful when `-l` argument is used.
  * __systemd-sleep__ - A wake-up hook. [1]
 
+Installation
+------------
+ * Arch Linux - Available on the [AUR](https://aur.archlinux.org/packages/display-visor) as `display-visor`
+
+Or manually with:
+
+    $ sudo make (un)install
+
 Dependencies
 ------------
 * [xorg-xrandr](http://www.x.org/wiki/Projects/XRandR/)
@@ -57,7 +66,7 @@ Dependencies
 
 Notes
 -----
- [1] I am aware this is intended for local use only. If there is a better Bash implementation, I am open to suggestions.
+ [1] Please see [Issue #8](https://github.com/beanaroo/display-visor/issues/8)
 
 ----
 ####Credits

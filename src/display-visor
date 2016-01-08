@@ -11,6 +11,7 @@ usage ()
 	-i, --i3	Test for i3wm instance.
                          For avoiding conflict with multiple environments.
 	-l, --lid	Check laptop lid status.
+                         Ignored/Assumed closed if not given. 
                          It is possible to specify switch. Defaults to 'LID0'
                          If unsure, look under /proc/acpi/button/lid/...
 	-v, --version	Print version info.
