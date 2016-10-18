@@ -1,10 +1,13 @@
 #!/bin/bash
 version="0.4"
 notif_header_outputchange="Monitor settings change"
+screen0=LVDS1
+screen1=HDMI1
+screen2=VGA1
 
 usage ()
 {
-	echo "Usage: display-visor [-f] [-i] [-l [switch]]
+	echo "Usage: display-visor [-h] [-f] [-i] [-l [switch]] [-n] [-e] [-0 [screen]] [-1 [screen]] [-2 [screen]] [-v]
 
 	-h, --help	Print this help.
 	-f, --feh	Run feh bg script.
@@ -18,6 +21,9 @@ usage ()
 	-n, --notif	Issue a notification on each monitor change.
                          This uses notify-send over dbus. Notification daemon has to be running.
 	-e, --noecho	Don't echo each monitor change.
+	-0, --screen0	Specify new name for screen 0 (default: LVDS1).
+	-1, --screen1	Specify new name for screen 1 (default: HDMI1).
+	-2, --screen2	Specify new name for screen 2 (default: VGA1).
 	-v, --version	Print version info.
 
  Useful for setting monitor layouts on system login/resume/hotplug
@@ -38,11 +44,21 @@ handle_args ()
 			-f | --feh )		fehbg=true;;
 			-i | --i3 )			i3test=true;;
 			-l | --lid )		lidtest=true
-								lidswitch=${2:-LID0}
-								lidstatus=$(cat /proc/acpi/button/lid/$lidswitch/state 2>/dev/null | awk '{print $NF}')
-								shift;;
+								if [ "${2:0:1}" == - -o -z "$2" ]; then
+									lidswitch=LID0
+								else
+									lidswitch=$2
+									shift
+								fi
+								lidstatus=$(cat /proc/acpi/button/lid/$lidswitch/state 2>/dev/null | awk '{print $NF}');;
 			-n | --notif )      notification=true;;
 			-e | --noecho )     noecho=true;;
+			-0 | --screen0 )    screen0=$2
+								shift;;
+			-1 | --screen1 )    screen1=$2
+								shift;;
+			-2 | --screen2 )    screen2=$2
+								shift;;
 			-v | --version )	echo "display-visor v$version"
 								exit;;
 			* )				    usage
@@ -114,29 +130,29 @@ config_closed_lid ()
 {
 	if [ "$lidstatus" == "closed" ]; then
 		user_output "Laptop lid is closed."
-	elif [ "$LVDS1" -a -z "$lidtest" ]; then
+	elif [ "${!screen0}" -a -z "$lidtest" ]; then
 		user_output "Laptop display will be ignored unless -l option is set."
 	fi
-	if [ "$HDMI1" -a "$VGA1" ]; then
-		user_output "SETTING: HDMI1 (Primary) - VGA1 (Right)." 1 "$notif_header_outputchange"
-		xrandr --output LVDS1 --off \
-			   --output HDMI1 --auto --primary \
-			   --output VGA1 --auto --right-of HDMI1
-	elif [ "$HDMI1" -a -z "$VGA1" ]; then
-		user_output "SETTING: HDMI1 (Primary)." 1 "$notif_header_outputchange"
-		xrandr --output LVDS1 --off \
-			   --output VGA1 --off \
-			   --output HDMI1 --auto --primary
-	elif [ -z "$HDMI1" -a  "$VGA1" ]; then
-		user_output "SETTING: VGA1 (Primary)." 1 "$notif_header_outputchange"
-		xrandr --output LVDS1 --off \
-			   --output HDMI1 --off \
-			   --output VGA1 --auto --primary
+	if [ "${!screen1}" -a "${!screen2}" ]; then
+		user_output "SETTING: $screen1 (Primary) - $screen2 (Right)." 1 "$notif_header_outputchange"
+		xrandr --output $screen0 --off \
+			   --output $screen1 --auto --primary \
+			   --output $screen2 --auto --right-of $screen1
+	elif [ "${!screen1}" -a -z "${!screen2}" ]; then
+		user_output "SETTING: $screen1 (Primary)." 1 "$notif_header_outputchange"
+		xrandr --output $screen0 --off \
+			   --output $screen1 --auto --primary \
+			   --output $screen2 --off
+	elif [ -z "${!screen1}" -a "${!screen2}" ]; then
+		user_output "SETTING: $screen2 (Primary)." 1 "$notif_header_outputchange"
+		xrandr --output $screen0 --off \
+			   --output $screen1 --off \
+			   --output $screen2 --auto --primary
 	else
 		user_output "No external monitors are plugged in." 1 "$notif_header_outputchange"
-		xrandr --output HDMI1 --off \
-			   --output VGA1 --off \
-			   --output LVDS1 --auto --primary
+		xrandr --output $screen0 --auto --primary \
+			   --output $screen1 --off \
+			   --output $screen2 --off
 	fi
 }
 
@@ -144,27 +160,31 @@ config_closed_lid ()
 config_open_lid ()
 {
 	user_output "Laptop lid is open."
-	if [  "$HDMI1" -a  "$VGA1" ]; then
-		user_output "SETTING: LVDS1 (Left) - HDMI1 (Primary) - VGA1 (Right)." 1 "$notif_header_outputchange"
-		xrandr --output LVDS1 --off \
-			   --output HDMI1 --auto --primary \
-			   --output VGA1 --auto --right-of HDMI1
-	elif [  "$HDMI1" -a -z "$VGA1" ]; then
-		user_output "HDMI1 is plugged in, but not VGA1."
-		user_output "SETTING: LVDS1 (Primary) - HDMI1 (Right)." 1 "$notif_header_outputchange"
-		xrandr --output VGA1 --off \
-			   --output LVDS1 --auto --primary \
-			   --output HDMI1 --auto --right-of LVDS1 -noprimary
-	elif [ -z "$HDMI1" -a  "$VGA1" ]; then
-		user_output "SETTING: LVDS1 (Primary) - VGA1 (Right)." 1 "$notif_header_outputchange"
-		xrandr --output HDMI1 --off \
-			   --output LVDS1 --auto --primary \
-			   --output VGA1 --auto --right-of LVDS1 --noprimary
+	if [ "${!screen1}" -a "${!screen2}" ]; then
+		user_output "$screen1 and $screen2 are plugged in."
+		user_output "SETTING: $screen1 (Primary) - $screen2 (Right)." 1 "$notif_header_outputchange"
+		xrandr --output $screen0 --off \
+			   --output $screen1 --auto --primary \
+			   --output $screen2 --auto --right-of $screen1
+	elif [ "${!screen1}" -a -z "${!screen2}" ]; then
+		# work mode: one big screen as main, laptop with smaller screen right of it
+		user_output "$screen1 is plugged in, but not $screen2. Work mode."
+		user_output "SETTING: $screen1 (Primary) - $screen0 (Right)." 1 "$notif_header_outputchange"
+		xrandr --output $screen0 --auto --right-of $screen1 -noprimary \
+			   --output $screen1 --auto --primary \
+			   --output $screen2 --off
+	elif [ -z "${!screen1}" -a "${!screen2}" ]; then
+		# presentation mode: laptop main screen, presentation on external output
+		user_output "$screen2 is plugged in, but not $screen1. Presentation mode."
+		user_output "SETTING: $screen0 (Primary) - $screen2 (Right)." 1 "$notif_header_outputchange"
+		xrandr --output $screen0 --auto --primary \
+			   --output $screen1 --off \
+			   --output $screen2 --auto --right-of $screen0 --noprimary
 	else
 		user_output "No external monitors are plugged in." 1  "$notif_header_outputchange"
-		xrandr --output HDMI1 --off \
-			   --output VGA1 --off \
-			   --output LVDS1 --auto --primary
+		xrandr --output $screen0 --auto --primary \
+			   --output $screen1 --off \
+			   --output $screen2 --off
 	fi
 }
 
