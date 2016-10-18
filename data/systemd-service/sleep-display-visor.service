@@ -1,0 +1,9 @@
+[Unit]
+Description=Reconfigure the displays after waking up from sleep
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/pkill -x -RTMIN+5 display-visor
+
+[Install]
+WantedBy=sleep.target
