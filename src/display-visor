@@ -170,8 +170,8 @@ config_open_lid ()
 		# work mode: one big screen as main, laptop with smaller screen right of it
 		user_output "$screen1 is plugged in, but not $screen2. Work mode."
 		user_output "SETTING: $screen1 (Primary) - $screen0 (Right)." 1 "$notif_header_outputchange"
-		xrandr --output $screen0 --auto --right-of $screen1 -noprimary \
-			   --output $screen1 --auto --primary \
+		xrandr --output $screen1 --auto --primary \
+			   --output $screen0 --auto --right-of $screen1 \
 			   --output $screen2 --off
 	elif [ -z "${!screen1}" -a "${!screen2}" ]; then
 		# presentation mode: laptop main screen, presentation on external output
@@ -179,7 +179,7 @@ config_open_lid ()
 		user_output "SETTING: $screen0 (Primary) - $screen2 (Right)." 1 "$notif_header_outputchange"
 		xrandr --output $screen0 --auto --primary \
 			   --output $screen1 --off \
-			   --output $screen2 --auto --right-of $screen0 --noprimary
+			   --output $screen2 --auto --right-of $screen0
 	else
 		user_output "No external monitors are plugged in." 1  "$notif_header_outputchange"
 		xrandr --output $screen0 --auto --primary \
