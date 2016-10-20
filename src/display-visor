@@ -108,9 +108,7 @@ declare_outputs ()
 {
 	devices=$(find /sys/class/drm/*/status)
 	while read l ; do
-		dir=$(dirname $l)
-		status=$(cat $l)
-		dev=$(echo $dir | cut -d\- -f 2-)
+		dev=$(echo $(dirname $l) | cut -d\- -f 2-)
 
 		if [ $(expr match  $dev "HDMI") != "0" ]; then
 			dev=HDMI${dev#HDMI-?-}
@@ -118,7 +116,7 @@ declare_outputs ()
 			dev=$(echo $dev | tr -d '-')
 		fi
 
-		if [ "connected" == "$status" ]; then
+		if [ "connected" == $(cat $l) ]; then
 			user_output "$dev connected"
 			declare -gA $dev="yes"
 		fi
