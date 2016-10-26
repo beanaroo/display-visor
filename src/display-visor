@@ -94,6 +94,8 @@ declare_outputs ()
         if [ "connected" == "$status" ]; then
             echo "$prefix $dev connected"
             declare -gA $dev="yes"
+        else
+            unset $dev
         fi
     done <<< "$devices"
 }
