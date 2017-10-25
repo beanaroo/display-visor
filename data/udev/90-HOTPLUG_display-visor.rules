@@ -1,1 +1,1 @@
-ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", RUN+="pkill -RTMIN+5 display-visor"
+ACTION=="change", SUBSYSTEM=="drm", ENV{HOTPLUG}=="1", RUN+="/usr/bin/pkill -x -RTMIN+5 display-visor"
